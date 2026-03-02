@@ -1,0 +1,218 @@
+@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap");
+
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f1a 100%);
+  background-size: 200% 200%;
+  animation: gradientMove 15s ease infinite;
+  color: #000 !important;
+  font-family: "Rajdhani", sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+@keyframes gradientMove {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Glassmorphism List Rows */
+.glass-row {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-left: 4px solid transparent;
+  box-shadow: 0 4px 15px 0 rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.6s ease-out forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.glass-row:hover {
+  transform: translateX(8px);
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: -4px 8px 25px 0 rgba(0, 0, 0, 0.3);
+  border-left-color: #00d4ff;
+}
+
+.glass-row.danger-glow {
+  border-left-color: #ff3366;
+  background: rgba(255, 200, 200, 0.45);
+}
+
+.glass-row.danger-glow:hover {
+  box-shadow: -4px 8px 25px 0 rgba(255, 50, 50, 0.3);
+  border-left-color: #ff1155;
+  background: rgba(255, 200, 200, 0.65);
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Typography styles */
+.neon-title {
+  color: #000;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.neon-text-green {
+  color: #000;
+  font-weight: bold;
+}
+
+.neon-text-cyan {
+  color: #000;
+  font-weight: bold;
+}
+
+.neon-text-danger {
+  color: #000;
+  font-weight: bold;
+}
+
+/* Custom Progress Bars */
+.progress-glass-long {
+  background-color: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  height: 18px;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  flex-grow: 1;
+}
+
+.progress-bar {
+  transition: width 0.6s ease;
+}
+
+.progress-bar.bg-success {
+  background: linear-gradient(90deg, #00b09b, #96c93d);
+  box-shadow: 0 0 10px rgba(150, 201, 61, 0.8);
+}
+
+.progress-bar.bg-warning {
+  background: linear-gradient(90deg, #f12711, #f5af19);
+  box-shadow: 0 0 10px rgba(245, 175, 25, 0.8);
+}
+
+.progress-bar.bg-danger {
+  background: linear-gradient(90deg, #cb2d3e, #ef473a);
+  box-shadow: 0 0 15px rgba(239, 71, 58, 0.9);
+}
+
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: rgba(0, 0, 0, 0.1);
+}
+
+.recharts-text {
+  fill: #000 !important;
+  font-weight: bold;
+}
+
+/* ─── Summary Cards ─────────────────────────────────────── */
+.summary-card {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  padding: 12px 24px;
+  text-align: center;
+  min-width: 120px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease;
+}
+
+.summary-card:hover {
+  transform: translateY(-3px);
+}
+
+.summary-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.summary-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ─── Glass Panel ───────────────────────────────────────── */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+/* ─── Blink Animation for NoReporta ─────────────────────── */
+.blink {
+  animation: blinkAnim 1s ease-in-out infinite;
+}
+
+@keyframes blinkAnim {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+/* ─── Tab Active Override ───────────────────────────────── */
+.nav-pills .nav-link {
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.nav-pills .nav-link:hover:not(.active) {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* ─── Table Styles ──────────────────────────────────────── */
+.table {
+  background: transparent;
+}
+
+.table thead th {
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.15);
+}
+
+.table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.table tbody tr:hover {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
