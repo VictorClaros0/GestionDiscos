@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from "recharts";
 import { FaChartBar } from "react-icons/fa";
 
-const API_BASE = "http://localhost:5042";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5042";
 
 const Histogram = () => {
     const [logs, setLogs] = useState([]);

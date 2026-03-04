@@ -6,7 +6,7 @@ import CommandPanel from "./components/CommandPanel";
 import ConfigPanel from "./components/ConfigPanel";
 import Histogram from "./assets/Histogram";
 
-const API_BASE = "http://localhost:5042";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5042";
 const MAX_DEVICES = 9;
 
 /* ─── EPOCH UTILITIES ─────────────────────────────────────
