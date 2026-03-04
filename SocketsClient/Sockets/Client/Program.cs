@@ -14,6 +14,8 @@ namespace ClientApp
         private static int _intervalSeconds = 5;
         private static readonly object _intervalLock = new();
         private static readonly Random _rng = new();
+        private static string OfflineLogPath = "";
+        private static string HistoryLogPath = "";
 
         static async Task Main()
         {
@@ -27,6 +29,11 @@ namespace ClientApp
             int port = int.Parse(config["ServerSettings:ServerPort"] ?? "5000");
             _intervalSeconds = int.Parse(config["ServerSettings:IntervalSeconds"] ?? "5");
             string logPath = config["Logging:LogFilePath"] ?? "logs/client.log";
+
+            var logDir = Path.GetDirectoryName(Path.GetFullPath(logPath)) ?? "logs";
+            Directory.CreateDirectory(logDir);
+            OfflineLogPath = Path.Combine(logDir, "offline_metrics.jsonl");
+            HistoryLogPath = Path.Combine(logDir, "metrics_history.log");
 
             // ─── SERILOG ────────────────────────────────────────────
             Log.Logger = new LoggerConfiguration()
@@ -59,6 +66,9 @@ namespace ClientApp
                     Log.Information("✅ Conectado al servidor {IP}:{Port}", serverIP, port);
 
                     using var stream = tcpClient.GetStream();
+
+                    // Sincronizar métricas atrasadas antes de continuar
+                    await SyncOfflineMetrics(stream, cts.Token);
 
                     // Run sender and listener concurrently
                     var senderTask = SendMetricsLoop(stream, macAddress, hostname, os, cts.Token);
@@ -117,7 +127,7 @@ namespace ClientApp
                         UsedMemory = usedGB,
                         UsagePercent = Math.Round(usagePercent, 2),
                         Iops = simulatedIops,
-                        Timestamp = DateTime.UtcNow,
+                        Timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                         DriveName = driveName,
                         DriveType = driveType
                     };
@@ -129,22 +139,76 @@ namespace ClientApp
                     };
 
                     string json = JsonSerializer.Serialize(message);
-                    byte[] data = Encoding.UTF8.GetBytes(json + "\n");
-                    await stream.WriteAsync(data, ct);
+                    
+                    try
+                    {
+                        byte[] data = Encoding.UTF8.GetBytes(json + "\n");
+                        await stream.WriteAsync(data, ct);
+                        
+                        // Guardar en log histórico permanente
+                        await File.AppendAllTextAsync(HistoryLogPath, json + Environment.NewLine, ct);
 
-                    Log.Information("📤 Enviado: {Drive} ({Type}) {Used}/{Total} GB ({Pct}%) IOPS:{Iops}",
-                        driveName, driveType, usedGB, totalGB, usagePercent.ToString("F1"), simulatedIops);
+                        Log.Information("📤 Enviado en vivo: {Drive} ({Type}) {Used}/{Total} GB ({Pct}%) IOPS:{Iops}",
+                            driveName, driveType, usedGB, totalGB, usagePercent.ToString("F1"), simulatedIops);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warning("Nube inaccesible ({Error}). Guardando métrica en disco offline...", ex.Message);
+                        await File.AppendAllTextAsync(OfflineLogPath, json + Environment.NewLine, CancellationToken.None);
+                        throw; // Burbujear error para romper el loop y forzar reconexión TCP
+                    }
 
                     int interval;
                     lock (_intervalLock) { interval = _intervalSeconds; }
                     await Task.Delay(interval * 1000, ct);
                 }
                 catch (OperationCanceledException) { break; }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    Log.Error("Error enviando métricas: {Error}", ex.Message);
+                    // Romper loop para forzar el ciclo de reconexión del while principal
                     break;
                 }
+            }
+        }
+
+        // ─── OFFLINE SYNC ───────────────────────────────────────────
+        static async Task SyncOfflineMetrics(NetworkStream stream, CancellationToken ct)
+        {
+            if (!File.Exists(OfflineLogPath)) return;
+
+            var lines = await File.ReadAllLinesAsync(OfflineLogPath, ct);
+            if (lines.Length == 0) return;
+
+            Log.Information("♻️ Iniciando sincronización de {Count} métricas offline pendientes...", lines.Length);
+            var unsynced = new List<string>();
+
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                
+                try
+                {
+                    byte[] data = Encoding.UTF8.GetBytes(line + "\n");
+                    await stream.WriteAsync(data, ct);
+                    
+                    // Solo si llegó bien, se mueve al historial masivo
+                    await File.AppendAllTextAsync(HistoryLogPath, line + Environment.NewLine, ct);
+                }
+                catch
+                {
+                    unsynced.Add(line);
+                }
+            }
+
+            if (unsynced.Any())
+            {
+                await File.WriteAllLinesAsync(OfflineLogPath, unsynced, ct);
+                Log.Warning("⚠️ Sincronización parcial. Quedan {Count} métricas pendientes.", unsynced.Count);
+            }
+            else
+            {
+                File.Delete(OfflineLogPath);
+                Log.Information("✅ Sincronización completada. Todas las métricas offline subidas.");
             }
         }
 
@@ -326,7 +390,7 @@ namespace ClientApp
         [JsonPropertyName("usedMemory")] public long UsedMemory { get; set; }
         [JsonPropertyName("usagePercent")] public double UsagePercent { get; set; }
         [JsonPropertyName("iops")] public int Iops { get; set; }
-        [JsonPropertyName("timestamp")] public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+        [JsonPropertyName("timestamp")] public long Timestamp { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         [JsonPropertyName("driveName")] public string DriveName { get; set; } = "";
         [JsonPropertyName("driveType")] public string DriveType { get; set; } = "";
     }

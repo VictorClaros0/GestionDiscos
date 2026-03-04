@@ -185,8 +185,8 @@ const CommandPanel = ({ nodes, apiBase }) => {
                                         <td>{getStatusBadge(cmd.status)}</td>
                                         <td><code>{cmd.commandText}</code></td>
                                         <td>{nodeName}</td>
-                                        <td style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{new Date(cmd.sentAt).toLocaleString()}</td>
-                                        <td style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{cmd.ackedAt ? new Date(cmd.ackedAt).toLocaleString() : "—"}</td>
+                                        <td style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{cmd.sentAt ? new Date(cmd.sentAt * 1000).toLocaleString() : "—"}</td>
+                                        <td style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{cmd.ackedAt ? new Date(cmd.ackedAt * 1000).toLocaleString() : "—"}</td>
                                         <td style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{cmd.ackResponse || "—"}</td>
                                     </tr>
                                 );

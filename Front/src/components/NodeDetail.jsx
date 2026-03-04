@@ -18,8 +18,8 @@ const NodeDetail = ({ nodes, selectedNode, onSelectNode, apiBase }) => {
         setLoading(true);
         try {
             let url = `${apiBase}/api/metrics?nodeId=${nodeId}`;
-            if (dateFrom) url += `&from=${new Date(dateFrom).toISOString()}`;
-            if (dateTo) url += `&to=${new Date(dateTo).toISOString()}`;
+            if (dateFrom) url += `&from=${Math.floor(new Date(dateFrom).getTime() / 1000)}`;
+            if (dateTo) url += `&to=${Math.floor(new Date(dateTo).getTime() / 1000)}`;
             const res = await fetch(url);
             const data = await res.json();
             setMetrics(data.reverse());
@@ -38,7 +38,7 @@ const NodeDetail = ({ nodes, selectedNode, onSelectNode, apiBase }) => {
     };
 
     const chartData = metrics.map(m => ({
-        time: m.timestampEpoch ? new Date(m.timestampEpoch * 1000).toLocaleTimeString() : new Date(m.timestamp).toLocaleTimeString(),
+        time: m.timestampEpoch ? new Date(m.timestampEpoch * 1000).toLocaleTimeString() : new Date(m.timestamp * 1000).toLocaleTimeString(),
         usagePercent: m.usagePercent,
         totalMemory: m.totalMemory,
         freeMemory: m.freeMemory,
