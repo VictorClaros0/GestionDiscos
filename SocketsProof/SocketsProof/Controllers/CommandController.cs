@@ -41,7 +41,7 @@ namespace SocketsProof.Controllers
                     c.CommandText,
                     c.SentAt,
                     Status = c.Status.ToString(),
-                    AckedAt = c.Ack != null ? c.Ack.AckedAt : (DateTime?)null,
+                    AckedAt = c.Ack != null ? c.Ack.AckedAt : (long?)null,
                     AckResponse = c.Ack != null ? c.Ack.Response : null
                 })
                 .ToListAsync();
@@ -69,7 +69,7 @@ namespace SocketsProof.Controllers
                 Id = Guid.NewGuid(),
                 NodeId = request.NodeId,
                 CommandText = request.CommandText,
-                SentAt = DateTime.UtcNow,
+                SentAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 Status = CommandStatus.Sent
             };
 

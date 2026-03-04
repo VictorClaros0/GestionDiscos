@@ -10,7 +10,7 @@ namespace SocketsProof.Models
         public int freeMemory { get; set; }
         public double UsagePercent { get; set; }
         public int Iops { get; set; }
-        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+        public long Timestamp { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         public string? DriveName { get; set; }
         public string? DriveType { get; set; }
         public Guid clientId { get; set; }

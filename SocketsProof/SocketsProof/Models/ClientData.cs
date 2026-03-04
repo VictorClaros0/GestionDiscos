@@ -49,7 +49,7 @@ namespace SocketsProof.Models
         public int Iops { get; set; }
 
         [JsonPropertyName("timestamp")]
-        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+        public long Timestamp { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
         [JsonPropertyName("driveName")]
         public string DriveName { get; set; } = string.Empty;

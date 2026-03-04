@@ -34,8 +34,8 @@ namespace SocketsProof.Migrations
                     b.Property<string>("IP")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<DateTime>("LastSeen")
-                        .HasColumnType("datetime2");
+                    b.Property<long>("LastSeen")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("OS")
                         .HasColumnType("nvarchar(max)");
@@ -76,8 +76,8 @@ namespace SocketsProof.Migrations
                     b.Property<Guid>("NodeId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("SentAt")
-                        .HasColumnType("datetime2");
+                    b.Property<long>("SentAt")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -96,8 +96,8 @@ namespace SocketsProof.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<DateTime>("AckedAt")
-                        .HasColumnType("datetime2");
+                    b.Property<long>("AckedAt")
+                        .HasColumnType("bigint");
 
                     b.Property<Guid>("CommandId")
                         .HasColumnType("uniqueidentifier");
@@ -119,11 +119,17 @@ namespace SocketsProof.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("DriveName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DriveType")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("Iops")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2");
+                    b.Property<long>("Timestamp")
+                        .HasColumnType("bigint");
 
                     b.Property<double>("UsagePercent")
                         .HasColumnType("float");

@@ -242,7 +242,7 @@
                     OS = data.OS,
                     IP = remoteIp,
                     Status = NodeStatus.Active,
-                    LastSeen = DateTime.UtcNow
+                    LastSeen = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                 };
                 db.Clients.Add(clientRecord);
                 await db.SaveChangesAsync(ct);
@@ -250,7 +250,7 @@
             }
 
             // Update node info
-            clientRecord.LastSeen = DateTime.UtcNow;
+            clientRecord.LastSeen = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             clientRecord.Status = NodeStatus.Active;
             clientRecord.Hostname = data.Hostname ?? clientRecord.Hostname;
             clientRecord.OS = data.OS ?? clientRecord.OS;
@@ -268,7 +268,7 @@
                 freeMemory = (int)data.FreeMemory,
                 UsagePercent = Math.Round(usagePercent, 2),
                 Iops = data.Iops,
-                Timestamp = data.Timestamp != default ? data.Timestamp : DateTime.UtcNow,
+                Timestamp = data.Timestamp > 0 ? data.Timestamp : DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 DriveName = data.DriveName,
                 DriveType = data.DriveType,
                 clientId = clientRecord.id
@@ -317,7 +317,7 @@
             {
                 Id = Guid.NewGuid(),
                 CommandId = cmdId,
-                AckedAt = DateTime.UtcNow,
+                AckedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
                 Response = ack.Response
             };
 

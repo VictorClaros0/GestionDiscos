@@ -18,7 +18,7 @@ namespace SocketsProof.Models
         public string? OS { get; set; }
         public string? IP { get; set; }
         public NodeStatus Status { get; set; } = NodeStatus.Active;
-        public DateTime LastSeen { get; set; } = DateTime.UtcNow;
+        public long LastSeen { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         public List<DiskLog>? diskLogs { get; set; }
         public List<Command>? Commands { get; set; }
     }

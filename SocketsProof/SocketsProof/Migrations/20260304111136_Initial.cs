@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SocketsProof.Migrations
 {
     /// <inheritdoc />
-    public partial class AddBidirectionalSupport : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -22,7 +22,7 @@ namespace SocketsProof.Migrations
                     OS = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IP = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    LastSeen = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    LastSeen = table.Column<long>(type: "bigint", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -36,7 +36,7 @@ namespace SocketsProof.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     NodeId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CommandText = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    SentAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    SentAt = table.Column<long>(type: "bigint", nullable: false),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: false)
                 },
                 constraints: table =>
@@ -59,7 +59,9 @@ namespace SocketsProof.Migrations
                     freeMemory = table.Column<int>(type: "int", nullable: false),
                     UsagePercent = table.Column<double>(type: "float", nullable: false),
                     Iops = table.Column<int>(type: "int", nullable: false),
-                    Timestamp = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    Timestamp = table.Column<long>(type: "bigint", nullable: false),
+                    DriveName = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    DriveType = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     clientId = table.Column<Guid>(type: "uniqueidentifier", nullable: false)
                 },
                 constraints: table =>
@@ -79,7 +81,7 @@ namespace SocketsProof.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     CommandId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    AckedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    AckedAt = table.Column<long>(type: "bigint", nullable: false),
                     Response = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>

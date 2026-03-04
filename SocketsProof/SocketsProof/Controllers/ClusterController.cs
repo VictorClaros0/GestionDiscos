@@ -16,13 +16,6 @@ namespace SocketsProof.Controllers
         }
 
         /// <summary>
-        /// Converts a DateTime to Unix epoch seconds.
-        /// </summary>
-        private static long ToEpoch(DateTime dt) =>
-            new DateTimeOffset(dt.Kind == DateTimeKind.Unspecified
-                ? DateTime.SpecifyKind(dt, DateTimeKind.Utc) : dt).ToUnixTimeSeconds();
-
-        /// <summary>
         /// GET /api/cluster/summary — Aggregated cluster stats with epoch timestamps.
         /// </summary>
         [HttpGet("summary")]
@@ -39,9 +32,9 @@ namespace SocketsProof.Controllers
 
             // For growth rate calculation
             long? oldestUsed = null;
-            DateTime? oldestTimestamp = null;
+            long? oldestTimestamp = null;
             long? newestUsed = null;
-            DateTime? newestTimestamp = null;
+            long? newestTimestamp = null;
 
             foreach (var node in nodes)
             {
@@ -79,7 +72,7 @@ namespace SocketsProof.Controllers
 
                 // Calculate per-node uptime (time since first metric)
                 double uptimeSeconds = oldest != null
-                    ? (DateTime.UtcNow - oldest.Timestamp).TotalSeconds
+                    ? (DateTimeOffset.UtcNow.ToUnixTimeSeconds() - oldest.Timestamp)
                     : 0;
 
                 // Calculate per-node availability estimate
@@ -87,7 +80,7 @@ namespace SocketsProof.Controllers
                 int totalMetrics = await _context.DiskLogs.CountAsync(d => d.clientId == node.id);
                 double availability = totalMetrics > 0 ? 99.9 : 0; // Simplified: if reporting, assume high availability
                 if (node.Status == NodeStatus.NoReporta && totalMetrics > 0)
-                    availability = Math.Round(Math.Max(95.0, 100.0 - (DateTime.UtcNow - node.LastSeen).TotalMinutes), 2);
+                    availability = Math.Round(Math.Max(95.0, 100.0 - ((DateTimeOffset.UtcNow.ToUnixTimeSeconds() - node.LastSeen) / 60.0)), 2);
 
                 nodeDetails.Add(new
                 {
@@ -99,7 +92,7 @@ namespace SocketsProof.Controllers
                     ip = node.IP,
                     status = node.Status.ToString(),
                     lastSeen = node.LastSeen,
-                    lastSeenEpoch = ToEpoch(node.LastSeen),
+                    lastSeenEpoch = node.LastSeen,
                     uptimeSeconds = Math.Round(uptimeSeconds, 0),
                     availability = Math.Round(availability, 2),
                     latestMetric = latest != null ? new
@@ -112,7 +105,7 @@ namespace SocketsProof.Controllers
                         driveName = latest.DriveName,
                         driveType = latest.DriveType,
                         timestamp = latest.Timestamp,
-                        timestampEpoch = ToEpoch(latest.Timestamp)
+                        timestampEpoch = latest.Timestamp
                     } : null
                 });
             }
@@ -125,7 +118,7 @@ namespace SocketsProof.Controllers
             double growthRateGBPerDay = 0;
             if (oldestUsed.HasValue && newestUsed.HasValue && oldestTimestamp.HasValue && newestTimestamp.HasValue)
             {
-                double daysDiff = (newestTimestamp.Value - oldestTimestamp.Value).TotalDays;
+                double daysDiff = (newestTimestamp.Value - oldestTimestamp.Value) / 86400.0;
                 if (daysDiff > 0.01) // at least ~15 minutes of data
                     growthRateGBPerDay = Math.Round((double)(newestUsed.Value - oldestUsed.Value) / daysDiff, 2);
             }
@@ -140,7 +133,7 @@ namespace SocketsProof.Controllers
                 ? Math.Round((double)activeNodes.Count / nodes.Count * 100, 2)
                 : 0;
 
-            long nowEpoch = ToEpoch(DateTime.UtcNow);
+            long nowEpoch = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
             return Ok(new
             {

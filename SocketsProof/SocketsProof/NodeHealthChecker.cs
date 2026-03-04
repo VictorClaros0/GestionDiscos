@@ -38,35 +38,37 @@ namespace SocketsProof
                 {
                     using var scope = _scopeFactory.CreateScope();
                     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+                    long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                    long threshold = now - _thresholdSeconds;
 
-                    var threshold = DateTime.UtcNow.AddSeconds(-_thresholdSeconds);
-                    var staleNodes = await db.Clients
+                    var deadNodes = db.Clients
                         .Where(c => c.Status == NodeStatus.Active && c.LastSeen < threshold)
-                        .ToListAsync(stoppingToken);
+                        .ToList();
 
-                    foreach (var node in staleNodes)
+                    foreach (var node in deadNodes)
                     {
                         node.Status = NodeStatus.NoReporta;
                         _logger.LogWarning("⚠️ Nodo {Name} ({Mac}) marcado como NoReporta. Último reporte: {LastSeen}",
                             node.name, node.mac, node.LastSeen);
                     }
 
-                    if (staleNodes.Count > 0)
+                    if (deadNodes.Count > 0)
                         await db.SaveChangesAsync(stoppingToken);
 
                     // Also check for commands that have been Sent for too long (timeout)
-                    var cmdThreshold = DateTime.UtcNow.AddSeconds(-60);
-                    var timedOutCommands = await db.Commands
-                        .Where(c => c.Status == CommandStatus.Sent && c.SentAt < cmdThreshold)
-                        .ToListAsync(stoppingToken);
+                    long cmdThreshold = now - 60; // 60 seconds timeout
 
-                    foreach (var cmd in timedOutCommands)
+                    var timeoutCommands = db.Commands
+                        .Where(c => c.Status == CommandStatus.Sent && c.SentAt < cmdThreshold)
+                        .ToList();
+
+                    foreach (var cmd in timeoutCommands)
                     {
                         cmd.Status = CommandStatus.Timeout;
                         _logger.LogWarning("⏱️ Comando {Id} marcado como Timeout", cmd.Id);
                     }
 
-                    if (timedOutCommands.Count > 0)
+                    if (timeoutCommands.Count > 0)
                         await db.SaveChangesAsync(stoppingToken);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)

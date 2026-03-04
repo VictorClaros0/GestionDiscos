@@ -22,8 +22,8 @@ namespace SocketsProof.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<object>>> GetMetrics(
             [FromQuery] Guid? nodeId,
-            [FromQuery] DateTime? from,
-            [FromQuery] DateTime? to)
+            [FromQuery] long? from,
+            [FromQuery] long? to)
         {
             var query = _context.DiskLogs.AsQueryable();
 
@@ -51,8 +51,7 @@ namespace SocketsProof.Controllers
                     d.DriveName,
                     d.DriveType,
                     d.Timestamp,
-                    timestampEpoch = new DateTimeOffset(d.Timestamp.Kind == DateTimeKind.Unspecified
-                        ? DateTime.SpecifyKind(d.Timestamp, DateTimeKind.Utc) : d.Timestamp).ToUnixTimeSeconds()
+                    timestampEpoch = d.Timestamp
                 })
                 .ToListAsync();
 

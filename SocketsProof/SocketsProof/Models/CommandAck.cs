@@ -7,7 +7,7 @@ namespace SocketsProof.Models
     {
         public Guid Id { get; set; }
         public Guid CommandId { get; set; }
-        public DateTime AckedAt { get; set; } = DateTime.UtcNow;
+        public long AckedAt { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         public string? Response { get; set; }
         public Command? Command { get; set; }
     }
