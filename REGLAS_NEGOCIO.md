@@ -42,15 +42,21 @@ Este documento centraliza todas las **reglas de negocio, comportamientos esperad
 - **Regla:** El cliente asume que puede haber latencia, cortes de ISP, o reinicios del servidor.
 - **Reconexión con Backoff:** Si el cliente intenta escribir por TCP y falla (o el socket se rompe abruptamente), entra en un loop de reconexión.
   - Intentará reconectarse indefinidamente _sin crashear_.
-  - Si no logra enviar la métrica en su ciclo, esa lectura se descarta temporalmente (no se encolan gigas de logs locales no enviados para no saturar memoria RAM del cliente, previniendo _Out of Memory_).
+  - **Buffering Offline:** Si no logra enviar la métrica en su ciclo, esa lectura **se guarda temporalmente en el archivo local `offline_metrics.jsonl`**. Esto asegura que los datos críticos generados durante el corte de red no se pierdan.
 
-### 3.2 Cliente se Reconecta tras un "Corte Largo"
+### 3.2 Sincronización Post-Corte (Data Sync)
+
+- **Regla:** Ninguna métrica generada sin internet debe perderse.
+- **Comportamiento:** Justo después de que el socket TCP cliente se reconecta exitosamente al Servidor Central, el cliente lee todo su buffer de `offline_metrics.jsonl` y envía el lote completo de métricas atrasadas de golpe.
+- Al vaciar exitosamente el buffer offline, el cliente retoma su envío `En Vivo`. Dado que las métricas offline mantuvieron su _Timestamp_ original, las gráficas en el central se pintarán retroactivamente de manera perfecta.
+
+### 3.3 Cliente se Reconecta tras un "Corte Largo"
 
 - **Escenario:** El cable de red de un nodo se desconecta durante 5 minutos.
 - **Regla (Back-end):** A los 30 segundos, el servidor lo marca como `NoReporta`.
-- **Regla (Recovery):** Cuando vuelve el internet tras 5 minutos, el cliente se reconecta y envía su primer `METRIC`. El servidor reconoce la MAC, actualiza la IP (por si cambió por DHCP), actualiza el `LastSeen` a la fecha actual y lo **regresa automáticamente** al estado `Active`. Sin intervención humana.
+- **Regla (Recovery):** Cuando vuelve el internet tras 5 minutos, el cliente sincroniza su buffer offline, el servidor reconoce la MAC, actualiza la IP (por si cambió por DHCP), actualiza el `LastSeen` basándose en el tiempo Epoch actual y lo **regresa automáticamente** al estado `Active`. Sin intervención humana.
 
-### 3.3 Caída estrepitosa del Servidor Central
+### 3.4 Caída estrepitosa del Servidor Central
 
 - **Regla:** Si el servicio central (.NET Backend) hace crash o se apaga intencionalmente.
 - **Comportamiento Cliente:** Todos los 9 clientes perderán el socket TCP y pasarán silenciosamente a estado "Polling de reconexión", esperando a que el servidor vuelva a estar online en el mismo puerto (5000).
@@ -82,11 +88,22 @@ Este documento centraliza todas las **reglas de negocio, comportamientos esperad
 
 ### 5.1 Política de Archivo Local (Cliente)
 
-- **Regla:** El cliente guarda en su propio disco (en el archivo `logs/client.log` configurado en `Serilog`) los eventos locales. Esta bitácora sirve para auditar comandos recibidos incluso si el servidor pierde su BD. Se usa políticas de rotado de logs.
+- **Historial de Sistema (Logs):** El cliente guarda en su propio disco (en el archivo `logs/client.log` configurado en `Serilog`) los eventos locales. Se usan políticas de rotado de logs por día.
+- **Historial de Métricas Emitidas:** Adicional a las métricas del servidor, cada vez que el cliente asegura que una métrica fue entregada con éxito a nivel TCP (ya sea en vivo o por sincronización post-corte), anexa una copia en un archivo continuo local `logs/metrics_history.log`. Esto sirve como bitácora física de auditoría interna.
 
 ### 5.2 Retención Centralizada BD (Servidor)
 
 - **Regla:** El appsettings define en días el límite moral de métricas (`"RetentionDays": 30`). Los datos de monitoreo más viejos pierden granularidad y son candidatos a purgarse de las tablas de `DiskLog` porque almacenan eventos cada 5 segundos, lo cual multiplicaría excesivamente el volumen de lectura transaccional SQL.
+
+---
+
+## 6. Sincronización de Tiempo Universal (Epoch)
+
+### 6.1 Problema de los Husos Horarios Lógicos
+
+- **Regla:** Los clientes regionales y el servidor central **NUNCA** intercambian timestamps en formato de Fechas ISO Estándar (`2026-03-04T10:00:00`).
+- **Comportamiento:** Para evitar desfasajes catastróficos por diferencia horaria entre departamentos, o relojes biológicos de latencia, todas las tres capas técnicas (Dashboard Web, Servidor SQL / TCP y Clientes) operan usando **Unix Epoch Timestamps (segundos transcurridos desde 1970)**.
+- **Conversión Humana:** El `Timestamp` se guarda nativamente como `long` (bigint) y solamente es traducido a una hora local de zona legible en microsegundos dentro de la UI de React.
 
 ---
 
