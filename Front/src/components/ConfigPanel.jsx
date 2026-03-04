@@ -32,18 +32,25 @@ const ConfigPanel = ({ nodes, apiBase }) => {
         setSending(false);
     };
 
+    // Preset intervals
+    const presets = [1, 5, 10, 15, 30, 60];
+
     return (
         <div className="glass-panel p-4">
-            <h4 className="fw-bold text-dark mb-3"><FaCog className="me-2" /> Configuración de Nodos</h4>
+            <h5 className="fw-bold mb-3" style={{ color: "var(--text-secondary)", fontSize: "0.85rem", letterSpacing: "1px", textTransform: "uppercase" }}>
+                <FaCog className="me-2" style={{ color: "var(--accent-cyan)" }} /> Configuración de Nodos
+            </h5>
 
-            <div className="border rounded p-4 bg-white" style={{ maxWidth: '600px' }}>
-                <h6 className="fw-bold mb-3">Cambiar Intervalo de Envío</h6>
-                <p className="text-muted small mb-3">
-                    Envía un <code>CONFIG_UPDATE</code> al cliente para que cambie su frecuencia de envío de métricas.
+            <div className="info-box" style={{ maxWidth: '650px' }}>
+                <h6 className="fw-bold mb-2" style={{ color: "var(--accent-cyan)", fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Cambiar Intervalo de Envío
+                </h6>
+                <p style={{ color: "var(--text-muted)", fontSize: "0.8rem" }} className="mb-3">
+                    Envía un <code>CONFIG_UPDATE</code> al cliente vía TCP para cambiar la frecuencia de envío de métricas en tiempo real.
                 </p>
 
                 <div className="mb-3">
-                    <label className="form-label fw-bold">Nodo</label>
+                    <label className="form-label">Nodo</label>
                     <select
                         className="form-select"
                         value={selectedNodeId}
@@ -57,8 +64,25 @@ const ConfigPanel = ({ nodes, apiBase }) => {
                 </div>
 
                 <div className="mb-3">
-                    <label className="form-label fw-bold">Intervalo (segundos)</label>
-                    <div className="d-flex gap-2 align-items-center">
+                    <label className="form-label">Intervalo (segundos)</label>
+                    {/* Preset buttons */}
+                    <div className="d-flex gap-2 mb-2 flex-wrap">
+                        {presets.map(p => (
+                            <button
+                                key={p}
+                                className={`quick-cmd-btn ${intervalSeconds === p ? 'active' : ''}`}
+                                style={intervalSeconds === p ? {
+                                    background: "rgba(0,180,255,0.15)",
+                                    borderColor: "var(--accent-cyan)",
+                                    color: "var(--accent-cyan)"
+                                } : {}}
+                                onClick={() => setIntervalSeconds(p)}
+                            >
+                                {p}s
+                            </button>
+                        ))}
+                    </div>
+                    <div className="d-flex gap-3 align-items-center">
                         <input
                             type="range"
                             className="form-range flex-grow-1"
@@ -67,11 +91,18 @@ const ConfigPanel = ({ nodes, apiBase }) => {
                             value={intervalSeconds}
                             onChange={(e) => setIntervalSeconds(Number(e.target.value))}
                         />
-                        <span className="badge bg-dark fs-6" style={{ minWidth: '50px' }}>
+                        <span style={{
+                            fontFamily: "JetBrains Mono",
+                            fontSize: "1.1rem",
+                            fontWeight: 700,
+                            color: "var(--accent-cyan)",
+                            minWidth: "50px",
+                            textAlign: "center"
+                        }}>
                             {intervalSeconds}s
                         </span>
                     </div>
-                    <div className="d-flex justify-content-between text-muted small mt-1">
+                    <div className="d-flex justify-content-between mt-1" style={{ color: "var(--text-muted)", fontSize: "0.7rem" }}>
                         <span>1s</span>
                         <span>30s</span>
                         <span>60s</span>
@@ -87,7 +118,10 @@ const ConfigPanel = ({ nodes, apiBase }) => {
                     {sending ? (
                         <span className="spinner-border spinner-border-sm"></span>
                     ) : (
-                        "Aplicar CONFIG_UPDATE"
+                        <>
+                            <FaCog className="me-2" />
+                            Aplicar CONFIG_UPDATE
+                        </>
                     )}
                 </button>
 

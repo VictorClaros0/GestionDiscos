@@ -1,5 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
-import { FaPaperPlane, FaSync } from "react-icons/fa";
+import { FaPaperPlane, FaSync, FaTerminal } from "react-icons/fa";
+
+const QUICK_COMMANDS = [
+    { label: "🔄 Reinicie servicio", text: "Reinicie servicio" },
+    { label: "💾 Verifique espacio", text: "Verifique espacio en disco" },
+    { label: "⚙️ Actualización config", text: "Actualización de configuración" },
+    { label: "📋 Estado del sistema", text: "systeminfo" },
+    { label: "🌐 Config de red", text: "ipconfig" },
+];
 
 const CommandPanel = ({ nodes, apiBase }) => {
     const [selectedNodeId, setSelectedNodeId] = useState("");
@@ -26,8 +34,9 @@ const CommandPanel = ({ nodes, apiBase }) => {
         return () => clearInterval(interval);
     }, [fetchCommands]);
 
-    const handleSend = async () => {
-        if (!selectedNodeId || !commandText.trim()) return;
+    const handleSend = async (cmdText) => {
+        const text = cmdText || commandText.trim();
+        if (!selectedNodeId || !text) return;
         setSending(true);
         try {
             const res = await fetch(`${apiBase}/api/commands`, {
@@ -35,11 +44,11 @@ const CommandPanel = ({ nodes, apiBase }) => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     nodeId: selectedNodeId,
-                    commandText: commandText.trim()
+                    commandText: text
                 })
             });
             if (res.ok) {
-                setCommandText("");
+                if (!cmdText) setCommandText("");
                 fetchCommands();
             }
         } catch (error) {
@@ -50,7 +59,7 @@ const CommandPanel = ({ nodes, apiBase }) => {
 
     const getStatusBadge = (status) => {
         switch (status) {
-            case "Sent": return <span className="badge bg-warning text-dark">⏳ Sent</span>;
+            case "Sent": return <span className="badge bg-warning">⏳ Sent</span>;
             case "Acked": return <span className="badge bg-success">✅ Acked</span>;
             case "Timeout": return <span className="badge bg-danger">⏱️ Timeout</span>;
             default: return <span className="badge bg-secondary">{status}</span>;
@@ -59,14 +68,39 @@ const CommandPanel = ({ nodes, apiBase }) => {
 
     return (
         <div className="glass-panel p-4">
-            <h4 className="fw-bold text-dark mb-3">💻 Panel de Comandos</h4>
+            <h5 className="fw-bold mb-3" style={{ color: "var(--text-secondary)", fontSize: "0.85rem", letterSpacing: "1px", textTransform: "uppercase" }}>
+                <FaTerminal className="me-2" style={{ color: "var(--accent-cyan)" }} /> Panel de Comandos
+            </h5>
 
             {/* Send Command */}
-            <div className="border rounded p-3 bg-white mb-4">
-                <h6 className="fw-bold mb-3">Enviar Comando</h6>
+            <div className="info-box mb-4">
+                <h6 className="fw-bold mb-3" style={{ color: "var(--accent-cyan)", fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Enviar Comando
+                </h6>
+
+                {/* Quick command buttons */}
+                <div className="mb-3">
+                    <label className="form-label" style={{ fontSize: "0.75rem" }}>Comandos Rápidos</label>
+                    <div className="d-flex flex-wrap gap-2">
+                        {QUICK_COMMANDS.map((cmd, i) => (
+                            <button
+                                key={i}
+                                className="quick-cmd-btn"
+                                onClick={() => {
+                                    if (selectedNodeId) handleSend(cmd.text);
+                                    else setCommandText(cmd.text);
+                                }}
+                                disabled={sending}
+                            >
+                                {cmd.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 <div className="row g-3">
                     <div className="col-md-4">
-                        <label className="form-label fw-bold small">Nodo Destino</label>
+                        <label className="form-label">Nodo Destino</label>
                         <select
                             className="form-select"
                             value={selectedNodeId}
@@ -79,7 +113,7 @@ const CommandPanel = ({ nodes, apiBase }) => {
                         </select>
                     </div>
                     <div className="col-md-6">
-                        <label className="form-label fw-bold small">Comando</label>
+                        <label className="form-label">Comando personalizado</label>
                         <input
                             type="text"
                             className="form-control"
@@ -92,7 +126,7 @@ const CommandPanel = ({ nodes, apiBase }) => {
                     <div className="col-md-2 d-flex align-items-end">
                         <button
                             className="btn btn-dark w-100"
-                            onClick={handleSend}
+                            onClick={() => handleSend()}
                             disabled={sending || !selectedNodeId || !commandText.trim()}
                         >
                             {sending ? (
@@ -107,7 +141,9 @@ const CommandPanel = ({ nodes, apiBase }) => {
 
             {/* Command History */}
             <div className="d-flex justify-content-between align-items-center mb-3">
-                <h6 className="fw-bold text-dark m-0">Historial de Comandos</h6>
+                <h6 className="fw-bold m-0" style={{ color: "var(--text-secondary)", fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Historial de Comandos
+                </h6>
                 <div className="d-flex gap-2 align-items-center">
                     <select
                         className="form-select form-select-sm"
@@ -129,7 +165,7 @@ const CommandPanel = ({ nodes, apiBase }) => {
             <div className="table-responsive">
                 <table className="table table-hover align-middle mb-0">
                     <thead>
-                        <tr className="text-dark">
+                        <tr>
                             <th>Estado</th>
                             <th>Comando</th>
                             <th>Nodo</th>
@@ -140,7 +176,7 @@ const CommandPanel = ({ nodes, apiBase }) => {
                     </thead>
                     <tbody>
                         {commands.length === 0 ? (
-                            <tr><td colSpan="6" className="text-center text-muted py-4">No hay comandos</td></tr>
+                            <tr><td colSpan="6" className="text-center py-4" style={{ color: "var(--text-muted)" }}>No hay comandos</td></tr>
                         ) : (
                             commands.map((cmd) => {
                                 const nodeName = nodes.find(n => n.id === cmd.nodeId)?.name || cmd.nodeId;
@@ -149,9 +185,9 @@ const CommandPanel = ({ nodes, apiBase }) => {
                                         <td>{getStatusBadge(cmd.status)}</td>
                                         <td><code>{cmd.commandText}</code></td>
                                         <td>{nodeName}</td>
-                                        <td className="small">{new Date(cmd.sentAt).toLocaleString()}</td>
-                                        <td className="small">{cmd.ackedAt ? new Date(cmd.ackedAt).toLocaleString() : "—"}</td>
-                                        <td className="small">{cmd.ackResponse || "—"}</td>
+                                        <td style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{new Date(cmd.sentAt).toLocaleString()}</td>
+                                        <td style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{cmd.ackedAt ? new Date(cmd.ackedAt).toLocaleString() : "—"}</td>
+                                        <td style={{ fontSize: "0.8rem", color: "var(--text-secondary)" }}>{cmd.ackResponse || "—"}</td>
                                     </tr>
                                 );
                             })
