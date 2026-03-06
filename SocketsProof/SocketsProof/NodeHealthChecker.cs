@@ -70,11 +70,74 @@ namespace SocketsProof
 
                     if (timeoutCommands.Count > 0)
                         await db.SaveChangesAsync(stoppingToken);
+
+                    // ─── LOG DE NODOS QUE DEJARON DE REPORTAR ────────────
+                    await WriteNoReportaLogFile(db);
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {
                     _logger.LogError(ex, "Error en NodeHealthChecker");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Escribe un archivo log con todos los nodos que alguna vez reportaron
+        /// pero dejaron de hacerlo (Status = NoReporta). Se actualiza cada 15 segundos.
+        /// </summary>
+        private async Task WriteNoReportaLogFile(AppDbContext db)
+        {
+            try
+            {
+                var nodosNoReportan = await db.Clients
+                    .Where(c => c.Status == NodeStatus.NoReporta)
+                    .OrderBy(c => c.LastSeen)
+                    .ToListAsync();
+
+                var logDir = Path.Combine(AppContext.BaseDirectory, "logs");
+                Directory.CreateDirectory(logDir);
+                var logPath = Path.Combine(logDir, "nodos_no_reportan.log");
+
+                using var writer = new StreamWriter(logPath, false, System.Text.Encoding.UTF8);
+                await writer.WriteLineAsync("═══════════════════════════════════════════════════════════════");
+                await writer.WriteLineAsync("  REGISTRO DE NODOS QUE DEJARON DE REPORTAR");
+                await writer.WriteLineAsync($"  Generado: {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss} (Actualización cada 15s)");
+                await writer.WriteLineAsync("═══════════════════════════════════════════════════════════════");
+                await writer.WriteLineAsync();
+
+                if (nodosNoReportan.Count == 0)
+                {
+                    await writer.WriteLineAsync("  ✅ Todos los nodos están reportando correctamente.");
+                }
+                else
+                {
+                    await writer.WriteLineAsync($"  ⚠️ Total de nodos sin reportar: {nodosNoReportan.Count}");
+                    await writer.WriteLineAsync();
+
+                    foreach (var nodo in nodosNoReportan)
+                    {
+                        var lastSeenDate = DateTimeOffset.FromUnixTimeSeconds(nodo.LastSeen).ToLocalTime();
+                        var sinReportar = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - nodo.LastSeen;
+
+                        await writer.WriteLineAsync($"  ──────────────────────────────────────────────");
+                        await writer.WriteLineAsync($"  Nombre:    {nodo.name}");
+                        await writer.WriteLineAsync($"  Hostname:  {nodo.Hostname}");
+                        await writer.WriteLineAsync($"  MAC:       {nodo.mac}");
+                        await writer.WriteLineAsync($"  IP:        {nodo.IP}");
+                        await writer.WriteLineAsync($"  OS:        {nodo.OS}");
+                        await writer.WriteLineAsync($"  Último reporte: {lastSeenDate:yyyy-MM-dd HH:mm:ss}");
+                        await writer.WriteLineAsync($"  Sin reportar:   {sinReportar}s ({sinReportar / 60}min)");
+                    }
+
+                    await writer.WriteLineAsync($"  ──────────────────────────────────────────────");
+                }
+
+                await writer.WriteLineAsync();
+                await writer.WriteLineAsync("═══════════════════════════════════════════════════════════════");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al escribir log de nodos NoReporta");
             }
         }
     }

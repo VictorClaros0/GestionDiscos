@@ -1,4 +1,5 @@
-﻿using System.Net.NetworkInformation;
+﻿using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
@@ -47,8 +48,9 @@ namespace ClientApp
             Log.Information("  Servidor: {IP}:{Port} | Intervalo: {Interval}s", serverIP, port, _intervalSeconds);
             Log.Information("═══════════════════════════════════════════════");
 
+            string clientName = config["ServerSettings:ClientName"];
             string macAddress = GetMacAddress();
-            string hostname = Environment.MachineName;
+            string hostname = !string.IsNullOrWhiteSpace(clientName) ? clientName : Environment.MachineName;
             string os = $"{Environment.OSVersion.Platform} {Environment.OSVersion.Version}";
 
             Log.Information("MAC: {Mac} | Host: {Host} | OS: {OS}", macAddress, hostname, os);
@@ -104,9 +106,19 @@ namespace ClientApp
             {
                 try
                 {
-                    // Get first ready drive
-                    DriveInfo drive = DriveInfo.GetDrives().FirstOrDefault(d => d.IsReady)
-                        ?? new DriveInfo("C");
+                    // Get first ready drive (or root partition on Linux)
+                    DriveInfo drive;
+                    if (OperatingSystem.IsLinux())
+                    {
+                        var drives = DriveInfo.GetDrives();
+                        drive = drives.FirstOrDefault(d => d.Name == "/") ?? 
+                                drives.FirstOrDefault(d => d.IsReady) ?? 
+                                new DriveInfo("/");
+                    }
+                    else
+                    {
+                        drive = DriveInfo.GetDrives().FirstOrDefault(d => d.IsReady) ?? new DriveInfo("C");
+                    }
 
                     long totalGB = drive.TotalSize / (1024L * 1024 * 1024);
                     long freeGB = drive.AvailableFreeSpace / (1024L * 1024 * 1024);
@@ -116,12 +128,14 @@ namespace ClientApp
                     string driveName = drive.Name;
                     string driveType = drive.DriveType == DriveType.Fixed ? DetectDriveMediaType(drive) : drive.DriveType.ToString();
 
+                    string localIp = GetLocalIPv4();
+
                     var metric = new MetricPayload
                     {
                         MacAddress = mac,
                         Hostname = hostname,
                         OS = os,
-                        IP = "",
+                        IP = localIp,
                         TotalMemory = totalGB,
                         FreeMemory = freeGB,
                         UsedMemory = usedGB,
@@ -365,6 +379,21 @@ namespace ClientApp
             catch
             {
                 return "Unknown";
+            }
+        }
+        
+        static string GetLocalIPv4()
+        {
+            try
+            {
+                using Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0);
+                socket.Connect("8.8.8.8", 65530); // Doesn't actually send data
+                IPEndPoint? endPoint = socket.LocalEndPoint as IPEndPoint;
+                return endPoint?.Address.ToString() ?? "";
+            }
+            catch
+            {
+                return "";
             }
         }
     }

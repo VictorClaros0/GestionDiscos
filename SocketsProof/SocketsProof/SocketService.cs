@@ -70,9 +70,8 @@
         private async Task StartWebSocketServer(CancellationToken stoppingToken)
         {
             HttpListener listener = new HttpListener();
-            // En desarrollo usa localhost (no requiere admin en Windows)
-            // En producción usa + (acepta conexiones externas)
-            var wsHost = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Production" ? "+" : "localhost";
+            // Usa + para aceptar conexiones externas desde cualquier IP
+            var wsHost = "+";
             listener.Prefixes.Add($"http://{wsHost}:{WsPort}/");
             listener.Start();
             _logger.LogInformation("Servidor WebSocket en puerto {Port}...", WsPort);
@@ -209,6 +208,33 @@
                 return;
             }
 
+            // ─── VALIDACIÓN DE HORA ──────────────────────────────────────
+            const int MaxClockSkewSeconds = 60;
+            long serverNow = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            long clientTimestamp = data.Timestamp;
+            long clockDiff = Math.Abs(serverNow - clientTimestamp);
+
+            if (clientTimestamp > 0 && clockDiff > MaxClockSkewSeconds)
+            {
+                _logger.LogWarning(
+                    "⏱️ Registro descartado de {Mac}: diferencia de reloj = {Diff}s (límite: {Max}s).",
+                    data.MacAddress, clockDiff, MaxClockSkewSeconds);
+
+                var clockError = new SocketMessage
+                {
+                    Type = "CLOCK_ERROR",
+                    Payload = JsonSerializer.SerializeToElement(new
+                    {
+                        message = "Registro descartado, revise la hora",
+                        serverTime = serverNow,
+                        clientTime = clientTimestamp,
+                        diffSeconds = clockDiff
+                    })
+                };
+                await SendToClient(tcpClient, clockError);
+                return;
+            }
+
             using var scope = _scopeFactory.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
@@ -240,7 +266,7 @@
                     mac = data.MacAddress,
                     Hostname = data.Hostname,
                     OS = data.OS,
-                    IP = remoteIp,
+                    IP = !string.IsNullOrEmpty(data.IP) ? data.IP : remoteIp,
                     Status = NodeStatus.Active,
                     LastSeen = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                 };
@@ -254,7 +280,7 @@
             clientRecord.Status = NodeStatus.Active;
             clientRecord.Hostname = data.Hostname ?? clientRecord.Hostname;
             clientRecord.OS = data.OS ?? clientRecord.OS;
-            clientRecord.IP = remoteIp;
+            clientRecord.IP = !string.IsNullOrEmpty(data.IP) ? data.IP : remoteIp;
 
             // Calculate usage percent
             double usagePercent = data.TotalMemory > 0
